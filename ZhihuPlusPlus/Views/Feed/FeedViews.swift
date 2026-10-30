@@ -9,26 +9,29 @@ struct FeedListView: View {
     @Environment(Router.self) private var router
 
     var body: some View {
-        List {
-            ForEach(loader.items) { item in
-                Button {
-                    guard let route = item.target.route else { return }
-                    onOpen(item)
-                    router.open(route)
-                } label: {
-                    FeedRowView(item: item)
-                        .feedCard()
+        ScrollViewReader { proxy in
+            List {
+                ForEach(loader.items) { item in
+                    Button {
+                        guard let route = item.target.route else { return }
+                        onOpen(item)
+                        router.open(route)
+                    } label: {
+                        FeedRowView(item: item)
+                            .feedCard()
+                    }
+                    .buttonStyle(.plain)
+                    .plainCardRow()
+                    .contextMenu { FeedItemMenu(item: item, loader: loader) }
+                    .onAppear { loader.onAppear(item) }
                 }
-                .buttonStyle(.plain)
-                .plainCardRow()
-                .contextMenu { FeedItemMenu(item: item, loader: loader) }
-                .onAppear { loader.onAppear(item) }
+                LoadMoreFooter(loader: loader, emptyText: emptyText)
             }
-            LoadMoreFooter(loader: loader, emptyText: emptyText)
+            .cardListStyle()
+            .refreshable { await loader.refresh() }
+            .task { await loader.loadIfNeeded() }
+            .scrollsToTop(on: router.scrollToTopRequest, first: loader.items.first?.id, proxy: proxy)
         }
-        .cardListStyle()
-        .refreshable { await loader.refresh() }
-        .task { await loader.loadIfNeeded() }
     }
 }
 
@@ -209,22 +212,25 @@ struct HotListView: View {
 
     var body: some View {
         let maxHeat = max(loader.items.map { Self.heat($0.metricText) }.max() ?? 1, 1)
-        List {
-            ForEach(Array(loader.items.enumerated()), id: \.element.id) { index, item in
-                Button {
-                    if let route = item.target.route { router.open(route) }
-                } label: {
-                    HotRow(rank: index + 1, item: item, heatRatio: Self.heat(item.metricText) / maxHeat)
-                        .feedCard()
+        ScrollViewReader { proxy in
+            List {
+                ForEach(Array(loader.items.enumerated()), id: \.element.id) { index, item in
+                    Button {
+                        if let route = item.target.route { router.open(route) }
+                    } label: {
+                        HotRow(rank: index + 1, item: item, heatRatio: Self.heat(item.metricText) / maxHeat)
+                            .feedCard()
+                    }
+                    .buttonStyle(.plain)
+                    .plainCardRow()
                 }
-                .buttonStyle(.plain)
-                .plainCardRow()
+                LoadMoreFooter(loader: loader)
             }
-            LoadMoreFooter(loader: loader)
+            .cardListStyle()
+            .refreshable { await loader.refresh() }
+            .task { await loader.loadIfNeeded() }
+            .scrollsToTop(on: router.scrollToTopRequest, first: loader.items.first?.id, proxy: proxy)
         }
-        .cardListStyle()
-        .refreshable { await loader.refresh() }
-        .task { await loader.loadIfNeeded() }
         .navigationTitle("热榜")
     }
 }

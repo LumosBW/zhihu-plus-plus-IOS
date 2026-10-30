@@ -65,4 +65,12 @@ extension View {
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
     }
+
+    /// `request` 变化时把列表滚回第一条（在已选中的 Tab 上再点一次时触发，见 `Router.scrollToTop`）。
+    func scrollsToTop<ID: Hashable>(on request: Int, first id: ID?, proxy: ScrollViewProxy) -> some View {
+        onChange(of: request) {
+            guard let id else { return }
+            withAnimation(.snappy) { proxy.scrollTo(id, anchor: .top) }
+        }
+    }
 }

@@ -28,6 +28,8 @@ final class Router {
     var safariURL: URL?
     /// 风控验证页面。
     var verificationURL: URL?
+    /// 每次加一，根页面的列表收到后滚回顶部（在已选中的 Tab 上再点一次时触发）。
+    private(set) var scrollToTopRequest = 0
 
     func open(_ route: Route) {
         if case .web(let url) = route {
@@ -43,6 +45,10 @@ final class Router {
 
     func popToRoot() {
         path.removeAll()
+    }
+
+    func scrollToTop() {
+        scrollToTopRequest += 1
     }
 }
 

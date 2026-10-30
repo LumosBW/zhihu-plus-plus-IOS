@@ -120,7 +120,13 @@ struct MainTabView: View {
                 // 推荐、发现两页都对应“首页” Tab，高亮在这两页之间保持不动。
                 FloatingTabBar(selection: selection, progress: max(0, pageProgress - 1)) { tab in
                     if tab == selection {
-                        routers[currentPage]!.popToRoot()
+                        // 在详情页时先回到根页面，已在根页面时滚回顶部。
+                        let router = routers[currentPage]!
+                        if router.path.isEmpty {
+                            router.scrollToTop()
+                        } else {
+                            router.popToRoot()
+                        }
                     } else {
                         let target = tab == .home ? MainPage.page(for: settings.recommendationSource) : MainPage.allCases.first { $0.tab == tab }!
                         withAnimation(.snappy) { scrolledPage = target }
