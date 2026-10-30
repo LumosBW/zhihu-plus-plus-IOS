@@ -233,6 +233,8 @@ struct HTMLContentView: UIViewRepresentable {
         var loadedSections: [String] = []
         var loadedFooter: String?
         var pageReady = false
+        /// 网页进程被系统回收后重新加载时，加载完要恢复到的滚动位置。
+        var pendingScrollY: CGFloat?
 
         init(parent: HTMLContentView) { self.parent = parent }
 
@@ -259,6 +261,24 @@ struct HTMLContentView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageReady = true
             syncContent()
+            if let y = pendingScrollY {
+                pendingScrollY = nil
+                // 排在 syncContent 注入正文的脚本之后执行，此时页面高度已经恢复。
+                webView.evaluateJavaScript("window.scrollTo(0, \(y))")
+            }
+        }
+
+        /// App 在后台时系统可能回收 WKWebView 的网页进程，回到前台后页面只剩白屏。
+        /// 这里重新加载页面骨架，正文在 didFinish 里重新注入，并尽量回到原来的阅读位置。
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            guard let document = loadedDocument else { return }
+            // contentOffset 含顶部内边距，换算成网页里的 scrollY。
+            let scrollView = webView.scrollView
+            pendingScrollY = max(0, scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
+            loadedSections = []
+            loadedFooter = nil
+            pageReady = false
+            webView.loadHTMLString(document, baseURL: URL(string: "https://www.zhihu.com/"))
         }
 
         func webView(
